@@ -18,6 +18,8 @@ class Model():
                 if (current_state, action) not in self.Q_values:
                     self.Q_values[(current_state, action)] = 0
                 self.Q_values[(current_state, action)] = self.Q_values[(current_state, action)]*(1-alpha) + sample*alpha
+                #updating V-value
+                self.V_values[current_state] = max(self.Q_values[(current_state, action)], self.V_values[current_state])
                 current_state = next_state
             exploration /= 1.2 #decrease exploration
 
