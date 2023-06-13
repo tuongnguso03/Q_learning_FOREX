@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 
 # shares normalization factor
-# 100 shares per trade
-HMAX_NORMALIZE = 100
+# 1000 EUR per lot since that is what it is
+HMAX_NORMALIZE = 1000
 HOLD_LIMIT = 1000
 # initial amount of money we have in our account
 INITIAL_ACCOUNT_BALANCE=1000000
@@ -22,6 +22,7 @@ class ForexEnv():
     def __init__(self, df,day = 0):
         self.day = day
         self.df = df
+        self.action_space = [-1, 0 , 1]
         # load data from a pandas dataframe
         self.data = self.df.loc[self.day,:] #data should be array, with data[0] being the price
         self.price_group = get_price_group(self.data)
@@ -38,19 +39,19 @@ class ForexEnv():
         self.trades = 0
         #self.reset()
 
-    def _buy(self):
-        if self.state[1] <= HOLD_LIMIT and self.balance//self.data[0] >= HMAX_NORMALIZE:
-            self.state[1] += HMAX_NORMALIZE
-            self.balance -= self.data[0]*HMAX_NORMALIZE*(1+TRANSACTION_FEE_PERCENT)
-            self.cost += self.data[0]*HMAX_NORMALIZE*TRANSACTION_FEE_PERCENT
+    def _buy(self, action):
+        if self.state[1] <= HOLD_LIMIT and self.balance//self.data[0] >= HMAX_NORMALIZE*action:
+            self.state[1] += HMAX_NORMALIZE*action
+            self.balance -= self.data[0]*HMAX_NORMALIZE*action*(1+TRANSACTION_FEE_PERCENT)
+            self.cost += self.data[0]*HMAX_NORMALIZE*action*TRANSACTION_FEE_PERCENT
             self.trades+=1
         return
     
-    def _sell(self):
+    def _sell(self, action):
         if self.state[1] > 0:
-            self.state[1] -= HMAX_NORMALIZE
-            self.balance += self.data[0]*HMAX_NORMALIZE*(1-TRANSACTION_FEE_PERCENT)
-            self.cost += self.data[0]*HMAX_NORMALIZE*TRANSACTION_FEE_PERCENT
+            self.state[1] += HMAX_NORMALIZE*action
+            self.balance -= self.data[0]*HMAX_NORMALIZE*action*(1-TRANSACTION_FEE_PERCENT)
+            self.cost -= self.data[0]*HMAX_NORMALIZE*action*TRANSACTION_FEE_PERCENT
             self.trades+=1
         return
     
@@ -59,8 +60,8 @@ class ForexEnv():
         Parameters
         ----------
         action : int
-            0 to sell, 1 to hold, 2 to buy. This is to easily fit the Q-value.
-    
+            -1 to sell, 0 to hold, 1 to buy. This is to easily fit the Q-value.
+           Later on, the value may fluctuate, allowing for more flexibility 
         Returns
         -------
         self.state: list
@@ -96,10 +97,10 @@ class ForexEnv():
             #print("begin_total_asset:{}".format(begin_total_asset))
 
             #taking the action
-            if action == 2:
-                self._buy()
-            elif action == 0:
-                self._sell()
+            if action > 0 :
+                self._buy(action)
+            elif action < 0:
+                self._sell(action)
 
             self.day += 1
             self.data = self.df.loc[self.day,:]
@@ -123,7 +124,7 @@ class ForexEnv():
         # load data from a pandas dataframe
         self.data = self.df.loc[self.day,:]
         self.price_group = get_price_group(self.data)
-        self.terminal = False             
+        self.terminate = False             
         # initalize state
         self.state = [self.price_group, 0]
         # initialize reward
