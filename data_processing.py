@@ -29,3 +29,20 @@ def get_price_group(price: float):
             return b # or bins.index(b)?
 
 
+def kangaroo_tail(price, open, high, low):
+    if price >= open:
+        up, down = price, open
+    else:
+        up, down = open, price
+    if high - up >= down - low:
+        score = (up - low) / (high - low)
+    else:
+        score = (high - down) / (high - low)
+    
+    return 1000 * (high - low) / score # The lower the score, the better. Hence the higher 1 / score is, the better, should we use this?
+    # 1000 multiplier is to convert to pips.
+
+def big_shadow():
+    # Need input of previous data
+    pass
+
