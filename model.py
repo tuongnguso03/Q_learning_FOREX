@@ -1,47 +1,52 @@
 from environment import ForexEnv
+from collections import defaultdict
+import pickle
 import random
 class Model():
-    def __init__(self) -> None:
-        self.Q_values = dict()
-        self.V_values = dict()
-    def Q_learning(self, environment: ForexEnv, iterations = 1000, alpha = 0.5, exploration = 0.5, discount = 0.5):
+    def __init__(self, load = None) -> None:
+        if load != None:
+            with open(load, 'rb') as handle:
+                self.Q_values = defaultdict(lambda: 0, pickle.load(handle))
+        else:
+            self.Q_values = defaultdict(lambda: 0, {})
+    def Q_learning(self, environment: ForexEnv, iterations = 1000, alpha = 0.5, exploration = 0.5, discount = 0.5, debug = False):
         for _ in range(iterations):
             print("Iteration ", _)
             current_state = environment.reset()
-            if current_state not in self.V_values:
-                self.V_values[current_state] = 0
             while True:
-                action = self.choose_action(environment, exploration=exploration)
+                action = self.choose_action(environment, exploration=exploration, debug = False)
                 next_state, reward = environment.step(action)
                 if environment.terminate: #have to check right after the step
                     break
-                if next_state not in self.V_values:
-                    self.V_values[next_state] = 0
-                sample = reward + discount*self.V_values[next_state]
+                v_value = max([self.Q_values[(next_state, actionx)] for actionx in environment.action_space])
+                sample = reward + discount*v_value
                 if (current_state, action) not in self.Q_values:
                     self.Q_values[(current_state, action)] = 0
                 self.Q_values[(current_state, action)] = self.Q_values[(current_state, action)]*(1-alpha) + sample*alpha
-                #updating V-value
-                self.V_values[current_state] = max([self.Q_values[(current_state, actionx)] for actionx in environment.action_space if (current_state, actionx) in self.Q_values])
                 current_state = next_state
-            exploration /= 1.2 
+            exploration /= 1.02 
             #decrease exploration
 
     
-    def choose_action(self, environment: ForexEnv, exploration: float):
+    def choose_action(self, environment: ForexEnv, exploration: float, debug = False):
         if self.flip_coin(exploration):
             return self._random_move(environment)
         else:
-            return self._best_move(environment)
+            return self._best_move(environment, debug)
     
     def _random_move(self, environment: ForexEnv):
         return random.choice(environment.action_space)
     
     def _best_move(self, environment: ForexEnv, debug = False):
+        best_value = -999
         best_actions = []
         for action in environment.action_space:
-            if (environment.state, action) in self.Q_values and self.Q_values[(environment.state, action)] >= self.V_values[(environment.state)]:
-                best_actions.append(action)
+            if (environment.state, action) in self.Q_values: 
+                if self.Q_values[(environment.state, action)] == best_value:
+                    best_actions.append(action)
+                else:
+                    best_actions = [action]
+                    best_value = self.Q_values[(environment.state, action)]
         if best_actions:
             if debug:
                 print(best_actions)
