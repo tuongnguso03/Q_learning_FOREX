@@ -79,5 +79,9 @@ def big_shadow(last_1_day: tuple, last_2_day: tuple, lastema200: float, ema200: 
 def wammies():
     pass
 
+def day_to_state() -> tuple:
+    #feature-based states go here
+    pass
+
 
 
