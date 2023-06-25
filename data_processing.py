@@ -1,6 +1,6 @@
 import pandas as pd
 import random
-
+df = pd.read_csv('forex_data.csv')
 
 def bin_price(df, n_bins):
     highest = df.loc[df['High'].idxmax()]['High']
@@ -11,7 +11,7 @@ def bin_price(df, n_bins):
 
 
 def build_bin_price():
-    df = pd.read_csv('forex_data.csv')
+    #df = pd.read_csv('forex_data.csv')
     n_bins = 20
     bins = [df.loc[df['Low'].idxmin()]['Low']]
     bin_size = bin_price(df, n_bins)[0]
