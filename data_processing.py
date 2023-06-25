@@ -4,6 +4,7 @@ import random
 df = pd.read_csv('forex_data.csv')
 #ema200s = df['200EMA']
 
+
 def bin_price(df, n_bins):
     highest = df.loc[df['High'].idxmax()]['High']
     lowest = df.loc[df['Low'].idxmin()]['Low']
@@ -13,6 +14,8 @@ def bin_price(df, n_bins):
 
 
 def build_bin_price():
+
+    #df = pd.read_csv('forex_data.csv')
     n_bins = 20
     bins = [df.loc[df['Low'].idxmin()]['Low']]
     bin_size = bin_price(df, n_bins)[0]

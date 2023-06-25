@@ -7,7 +7,8 @@ import pandas as pd
 # shares normalization factor
 # 1000 EUR per lot since that is what it is
 HMAX_NORMALIZE = 1000
-HOLD_LIMIT = 10000
+HOLD_LIMIT = 100000
+DEBT_LIMIT = -100000
 # initial amount of money we have in our account
 INITIAL_ACCOUNT_BALANCE=1000000
 # transaction fee: 1/1000 reasonable percentage
@@ -21,7 +22,7 @@ class ForexEnv():
     def __init__(self, df,day = 0):
         self.day = day
         self.df = df
-        self.action_space = [-1, 0 , 1]
+        self.action_space = [-5, -2, -1, 0 , 1, 2, 5]
         # load data from a pandas dataframe
         self.data = self.df.loc[self.day,:] #data should be array, with data[2] being the open price. Screw me over.
         self.price_group = get_price_group(self.data[1])
@@ -47,7 +48,7 @@ class ForexEnv():
         return
     
     def _sell(self, action):
-        if self.state[1] > 0:
+        if self.state[1] > DEBT_LIMIT:
             self.state = (self.state[0], self.state[1] + HMAX_NORMALIZE*action)
             self.balance -= self.data[2]*HMAX_NORMALIZE*action*(1-TRANSACTION_FEE_PERCENT)
             self.cost -= self.data[2]*HMAX_NORMALIZE*action*TRANSACTION_FEE_PERCENT
@@ -82,10 +83,6 @@ class ForexEnv():
             df_total_value.to_csv('account_value_train.csv')
             df_total_value.columns = ['account_value']
             df_total_value['daily_return']=df_total_value.pct_change(1)
-            #sharpe = (252**0.5)*df_total_value['daily_return'].mean()/df_total_value['daily_return'].std()
-            #print("Sharpe: ",sharpe)
-            #print("=================================")
-            #df_rewards = pd.DataFrame(self.rewards_memory)
             return (0, 0), 0 #dummy state
 
         else:
