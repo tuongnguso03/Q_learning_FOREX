@@ -24,7 +24,7 @@ class ForexEnv():
         self.df = df
         self.action_space = [-5, -2, -1, 0 , 1, 2, 5]
         # load data from a pandas dataframe
-        self.data = self.df.loc[self.day-2: self.day+1,:] #Passing the data of 3 days for feature extraction and that sort
+        self.data = self.df.loc[self.day-2: self.day,:] #Passing the data of 3 days for feature extraction and that sort
         self.day_state = day_to_state(self.data)
         self.terminate = False             
         # initalize state
@@ -99,7 +99,7 @@ class ForexEnv():
                 self._sell(action)
 
             self.day += 1
-            self.data = self.df.loc[self.day-2: self.day+1,:] #Passing the data of 3 days for feature extraction and that sort
+            self.data = self.df.loc[self.day-2: self.day,:] #Passing the data of 3 days for feature extraction and that sort
             self.day_state = day_to_state(self.data)       
             #load next state
             # print("stock_shares:{}".format(self.state[29:]))
@@ -116,9 +116,9 @@ class ForexEnv():
         return self.state, self.reward
 
     def reset(self):
-        self.day = 0
+        self.day = 2
         # load data from a pandas dataframe
-        self.data = self.df.loc[self.day-2: self.day+1,:] #Passing the data of 3 days for feature extraction and that sort
+        self.data = self.df.loc[self.day-2: self.day,:] #Passing the data of 3 days for feature extraction and that sort
         self.day_state = day_to_state(self.data)
         self.terminate = False             
         # initalize state
