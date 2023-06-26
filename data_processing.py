@@ -4,7 +4,6 @@ import random
 df = pd.read_csv('forex_data.csv')
 #ema200s = df['200EMA']
 
-
 def bin_price(df, n_bins):
     highest = df.loc[df['High'].idxmax()]['High']
     lowest = df.loc[df['Low'].idxmin()]['Low']
@@ -14,8 +13,6 @@ def bin_price(df, n_bins):
 
 
 def build_bin_price():
-
-    #df = pd.read_csv('forex_data.csv')
     n_bins = 20
     bins = [df.loc[df['Low'].idxmin()]['Low']]
     bin_size = bin_price(df, n_bins)[0]
@@ -35,7 +32,7 @@ def get_price_group(price: float):
 
 def trend(lastema200, ema200):
     trend = (ema200 - lastema200) / lastema200
-    return trend + 1 #values range from 0 to 2
+    return trend
 
 
 def kangaroo_tail(price, open, high, low, lastema200: float, ema200: float):
@@ -44,11 +41,11 @@ def kangaroo_tail(price, open, high, low, lastema200: float, ema200: float):
     else:
         up, down = open, price
     if high - up >= down - low:
-        score = (high - low) / (up - low)
+        score = (high - low) / (up - low) * (1 + trend(lastema200, ema200))
     else:
-        score = (high - low) / (high - down)
+        score = (high - low) / (high - down) * (1 - trend(lastema200, ema200))
     
-    return 1000 * (high - low) * score * trend(lastema200, ema200) # The lower the score, the better. Hence the higher 1 / score is, the better, should we use this?
+    return 1000 * (high - low) * score
     # 1000 multiplier is to convert to pips.
 
 
@@ -58,22 +55,26 @@ def big_shadow(last_1_day: tuple, last_2_day: tuple, lastema200: float, ema200: 
     score = 0
     price1, open1, high1, low1 = last_1_day
     price2, open2, high2, low2 = last_2_day
+
+
     def direction(price, open) -> str:
-        if price1 >= open1:
+        if price >= open:
             return "up"
         else:
             return "down"
+
+    
     mainDirection = direction(price1, open1)
     infDirection = direction(price2, open2)
     if mainDirection == infDirection:
         return 0
     else:
         if mainDirection == "up":
-            score = (price1 - open1) / (open2 - price2)
+            score = (price1 - open1) / (open2 - price2) * (1 - trend(lastema200, ema200))
         else:
-            score = (open1 - price1) / (price2 - open2)
+            score = (open1 - price1) / (price2 - open2) * (1 + trend(lastema200, ema200))
 
-        return 1000 * abs(price1 - open1) * score * trend(lastema200, ema200)
+        return 1000 * abs(price1 - open1) * score
 
 
 def wammies():
