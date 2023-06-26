@@ -1,8 +1,15 @@
 import pandas as pd
-import random
+from sklearn.cluster import KMeans
 
 df = pd.read_csv('forex_data.csv')
 #ema200s = df['200EMA']
+
+def run_kmeans(data, num_clusters):
+    kmeans = KMeans(n_clusters=num_clusters)
+    kmeans.fit([[x] for x in data])
+    k_centers = [round(center[0],8) for center in kmeans.cluster_centers_]
+    return k_centers
+
 
 # 1st feature: price
 def bin_price(df, n_bins):
@@ -13,8 +20,7 @@ def bin_price(df, n_bins):
     return bin_size, highest, lowest
 
 
-def build_bin_price():
-    n_bins = 10
+def build_bin_price(n_bins):
     bins = [df.loc[df['Low'].idxmin()]['Low']]
     bin_size = bin_price(df, n_bins)[0]
     for i in range(n_bins):
@@ -23,7 +29,7 @@ def build_bin_price():
 
 
 def get_price_group(price: float):
-    bins = build_bin_price()
+    bins = build_bin_price(10)
     for b in bins:
         if price < b:
             return b # or bins.index(b)?
@@ -96,6 +102,8 @@ def big_shadow(price1, open1, ema200, price2, open2, lastema200) -> float:
     if mainDirection == infDirection:
         return 0
     else:
+        if open2 - price2 == 0:
+            return 0
         if mainDirection == "up":
             score = (price1 - open1) / (open2 - price2)
         else:
@@ -113,17 +121,11 @@ def calculate_bs_score(df):
         score = big_shadow(df.loc[i+1, 'Price'], df.loc[i+1, 'Open'], df.loc[i+1, '200EMA'],
                             df.loc[i+2, 'Price'], df.loc[i+2, 'Open'], df.loc[i+2, '200EMA'])
         bs_score.append(score)
-    print(bs_score)
     return bs_score
 
 
-def dataset_with_indicators():
-    """build a new dataset with indicators"""
-    df = pd.read_csv('forex_data.csv')
-    print(df.columns)
+def dataset_with_indicators(df):
     processed_df = df.copy()
-
-    # add indicator toZone
     processed_df['toZone'] = calculate_toZone(df)
     processed_df['kt_score'] = calculate_kt_score(df)
     processed_df['bs_score'] = calculate_bs_score(df)
@@ -133,23 +135,12 @@ def dataset_with_indicators():
 
 df2 = pd.read_csv('forex_data_with_indicators.csv')
 
-def bin_toZone(df2, n_bins):
-    """distance to the nearest Zone"""    
-    highest = df2.loc[df2['toZone'].idxmax()]['toZone']
-    lowest = df2.loc[df2['toZone'].idxmin()]['toZone']
-    diff = highest - lowest
-    bin_size = round(diff / n_bins, 2)
-    return bin_size, highest, lowest
 
-
-def build_bin_toZone():
-    n_bins = 5
-    bins = [df2.loc[df2['toZone'].idxmin()]['toZone']]
-    bin_size = bin_price(df2, n_bins)[0]
-    for i in range(n_bins):
-        bins.append(round((bins[-1] + bin_size), 9))
-
-    return bins
+def build_bin_toZone(n_bins):
+    values = df2['toZone'].tolist()
+    k = n_bins
+    k_centers = run_kmeans(values, k)
+    return sorted(k_centers)
 
 
 def get_toZone_group(price: float):
@@ -162,61 +153,40 @@ def get_toZone_group(price: float):
         if distance < min_distance:
             min_distance = distance
             closest_zone = zone
-    bins = build_bin_toZone()
+    bins = build_bin_toZone(5)
     for b in bins:
-        if closest_zone < b:
+        if min_distance < b:
             return b  
         
-def bin_kt_score(df2, n_bins):
-    highest = df2.loc[df2['kt_score'].idxmax()]['kt_score']
-    lowest = df2.loc[df2['kt_score'].idxmin()]['kt_score']
-    diff = highest - lowest
-    bin_size = round(diff / n_bins, 2)
-    return bin_size, highest, lowest
 
-
-def build_bin_kt_score():
-    n_bins = 5
-    bins = [df2.loc[df2['kt_score'].idxmin()]['kt_score']]
-    bin_size = bin_price(df2, n_bins)[0]
-    for i in range(n_bins):
-        bins.append(round((bins[-1] + bin_size), 9))
-
-    return bins
+def build_bin_kt_score(n_bins):
+    values = df2['kt_score'].tolist()
+    k = n_bins
+    k_centers = run_kmeans(values, k)
+    return sorted(k_centers)
 
 
 def get_kt_score_group(kt_score: float):
-    bins = build_bin_kt_score()
+    bins = build_bin_kt_score(5)
     for b in bins:
         if kt_score < b:
             return b 
-        
-
-def bin_bs_score(df2, n_bins):
-    highest = df2.loc[df2['bs_score'].idxmax()]['bs_score']
-    lowest = df2.loc[df2['bs_score'].idxmin()]['bs_score']
-    diff = highest - lowest
-    bin_size = round(diff / n_bins, 2)
-    return bin_size, highest, lowest
 
 
-def build_bin_bs_score():
-    n_bins = 5
-    bins = [df2.loc[df2['bs_score'].idxmin()]['bs_score']]
-    bin_size = bin_price(df2, n_bins)[0]
-    for i in range(n_bins):
-        bins.append(round((bins[-1] + bin_size), 9))
-
-    return bins
+def build_bin_bs_score(n_bins):
+    values = df2['bs_score'].tolist()
+    k = n_bins
+    k_centers = run_kmeans(values, k)
+    return sorted(k_centers)
 
 
 def get_bs_score_group(bs_score: float):
-    bins = build_bin_bs_score()
+    bins = build_bin_bs_score(5)
     for b in bins:
         if bs_score < b:
             return b 
 
-        
+
 def day_to_state(data) -> tuple:
     #feature-based states go here
     days = []
