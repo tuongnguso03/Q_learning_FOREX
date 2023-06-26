@@ -1,4 +1,4 @@
-from data_processing import get_price_group
+from data_processing import day_to_state
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -19,16 +19,17 @@ print('Enter Forex Environment')
 print('Enter Forex Environment')
 class ForexEnv():
     """Trading environment"""
-    def __init__(self, df,day = 0):
+    def __init__(self, df,day = 2):
         self.day = day
         self.df = df
         self.action_space = [-5, -2, -1, 0 , 1, 2, 5]
         # load data from a pandas dataframe
-        self.data = self.df.loc[self.day,:] #data should be array, with data[2] being the open price. Screw me over.
-        self.price_group = get_price_group(self.data[1])
-        self.terminate = False             
+        self.data = self.df.loc[self.day-2: self.day,:] #Passing the data of 3 days for feature extraction and that sort
+        self.day_state = day_to_state(self.data)
+        self.terminate = False
+        self.day_open_rate = self.df.loc[self.day,:][2]            
         # initalize state
-        self.state = (self.price_group, 0) #[price_group, holdings]
+        self.state = (self.day_state, 0) #[price_group, holdings]
         # initialize reward
         self.reward = 0
         self.cost = 0
@@ -40,18 +41,18 @@ class ForexEnv():
         #self.reset()
 
     def _buy(self, action):
-        if self.state[1] + HMAX_NORMALIZE*action <= HOLD_LIMIT and self.balance//self.data[2] >= HMAX_NORMALIZE*action:
-            self.state = (self.state[0], self.state[1] + HMAX_NORMALIZE*action)
-            self.balance -= self.data[2]*HMAX_NORMALIZE*action*(1+TRANSACTION_FEE_PERCENT)
-            self.cost += self.data[2]*HMAX_NORMALIZE*action*TRANSACTION_FEE_PERCENT
+        if self.state[1] + HMAX_NORMALIZE*action <= HOLD_LIMIT and self.balance//self.day_open_rate >= HMAX_NORMALIZE*action:
+            self.state = (self.state[0], self.state[1]+ HMAX_NORMALIZE*action)
+            self.balance -= self.day_open_rate*HMAX_NORMALIZE*action*(1+TRANSACTION_FEE_PERCENT)
+            self.cost += self.day_open_rate*HMAX_NORMALIZE*action*TRANSACTION_FEE_PERCENT
             self.trades+=1
         return
     
     def _sell(self, action):
         if self.state[1] > DEBT_LIMIT:
             self.state = (self.state[0], self.state[1] + HMAX_NORMALIZE*action)
-            self.balance -= self.data[2]*HMAX_NORMALIZE*action*(1-TRANSACTION_FEE_PERCENT)
-            self.cost -= self.data[2]*HMAX_NORMALIZE*action*TRANSACTION_FEE_PERCENT
+            self.balance -= self.day_open_rate*HMAX_NORMALIZE*action*(1-TRANSACTION_FEE_PERCENT)
+            self.cost -= self.day_open_rate*HMAX_NORMALIZE*action*TRANSACTION_FEE_PERCENT
             self.trades+=1
         return
     
@@ -99,30 +100,27 @@ class ForexEnv():
                 self._sell(action)
 
             self.day += 1
-            self.data = self.df.loc[self.day,:]
-            self.price_group = get_price_group(self.data[2])         
-            #load next state
-            # print("stock_shares:{}".format(self.state[29:]))
-            self.state =  (self.price_group, self.state[1])
+            self.data = self.df.loc[self.day-2: self.day,:] #Passing the data of 3 days for feature extraction and that sort
+            self.day_state = day_to_state(self.data)
+            self.day_open_rate = self.df.loc[self.day,:][2]        
+            self.state =  (self.day_state, self.state[-1])
             
-            end_total_asset = self.state[1]*self.data[2] + self.balance
-            self.asset_memory.append(end_total_asset)
-            #print("end_total_asset:{}".format(end_total_asset))
-            
+            end_total_asset = self.state[1]*self.day_open_rate + self.balance
+            self.asset_memory.append(end_total_asset) 
             self.reward = end_total_asset - begin_total_asset            
-            # print("step_reward:{}".format(self.reward))
             self.rewards_memory.append(self.reward)
             self.reward = self.reward*REWARD_SCALING
         return self.state, self.reward
 
     def reset(self):
-        self.day = 0
+        self.day = 2
         # load data from a pandas dataframe
-        self.data = self.df.loc[self.day,:]
-        self.price_group = get_price_group(self.data[2])
+        self.data = self.df.loc[self.day-2: self.day,:] #Passing the data of 3 days for feature extraction and that sort
+        self.day_state = day_to_state(self.data)
+        self.day_open_rate = self.df.loc[self.day,:][2] 
         self.terminate = False             
         # initalize state
-        self.state = (self.price_group, 0)
+        self.state = (self.day_state, 0)
         # initialize reward
         self.reward = 0
         self.cost = 0
