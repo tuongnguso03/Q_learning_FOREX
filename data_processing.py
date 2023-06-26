@@ -4,6 +4,7 @@ from sklearn.cluster import KMeans
 df = pd.read_csv('forex_data.csv')
 #ema200s = df['200EMA']
 
+
 def run_kmeans(data, num_clusters):
     kmeans = KMeans(n_clusters=num_clusters)
     kmeans.fit([[x] for x in data])
@@ -12,12 +13,14 @@ def run_kmeans(data, num_clusters):
 
 
 # 1st feature: price
+
 def bin_price(df, n_bins):
     highest = df.loc[df['High'].idxmax()]['High']
     lowest = df.loc[df['Low'].idxmin()]['Low']
     diff = highest - lowest
     bin_size = round(diff / n_bins, 2)
     return bin_size, highest, lowest
+
 
 
 def build_bin_price(n_bins):
@@ -58,7 +61,7 @@ def calculate_toZone(df):
 # 3rd feature: kangaroo tail score
 def trend(lastema200, ema200):
     trend = (ema200 - lastema200) / lastema200
-    return trend + 1 #values range from 0 to 2
+    return trend
 
 
 def kangaroo_tail(price, open, high, low, ema200: float, lastema200: float):
@@ -67,11 +70,12 @@ def kangaroo_tail(price, open, high, low, ema200: float, lastema200: float):
     else:
         up, down = open, price
     if high - up >= down - low:
-        score = (high - low) / (up - low)
+        score = (high - low) / (up - low) * (1 + trend(lastema200, ema200))
     else:
-        score = (high - low) / (high - down)
+        score = (high - low) / (high - down) * (1 - trend(lastema200, ema200))
     
-    return 1000 * (high - low) * score * trend(lastema200, ema200) 
+    return 1000 * (high - low) * score
+
     # 1000 multiplier is to convert to pips.
 
 def calculate_kt_score(df):
@@ -92,11 +96,15 @@ def big_shadow(price1, open1, ema200, price2, open2, lastema200) -> float:
     # Need input of previous day's data:
     direction = None
     score = 0
+
+    
     def direction(price, open) -> str:
         if price >= open:
             return "up"
         else:
             return "down"
+
+    
     mainDirection = direction(price1, open1)
     infDirection = direction(price2, open2)
     if mainDirection == infDirection:
@@ -105,11 +113,11 @@ def big_shadow(price1, open1, ema200, price2, open2, lastema200) -> float:
         if open2 - price2 == 0:
             return 0
         if mainDirection == "up":
-            score = (price1 - open1) / (open2 - price2)
+            score = (price1 - open1) / (open2 - price2) * (1 - trend(lastema200, ema200))
         else:
-            score = (open1 - price1) / (price2 - open2)
+            score = (open1 - price1) / (price2 - open2) * (1 + trend(lastema200, ema200))
 
-        return 1000 * abs(price1 - open1) * score * trend(lastema200, ema200)
+        return 1000 * abs(price1 - open1) * score
 
 
 def calculate_bs_score(df):
