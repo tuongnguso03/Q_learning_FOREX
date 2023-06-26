@@ -133,6 +133,7 @@ def dataset_with_indicators(df):
     processed_df.to_csv('forex_data_with_indicators.csv', index=False)
 
 
+
 df2 = pd.read_csv('forex_data_with_indicators.csv')
 
 
@@ -143,7 +144,7 @@ def build_bin_toZone(n_bins):
     return sorted(k_centers)
 
 
-def get_toZone_group(price: float):
+def get_toZone_group(price: float, bins):
     strong_zones = [1.22176, 1.19554, 1.17464, 1.16199, 1.14506, 1.1297, 1.11691, 
                   1.10246, 1.08274, 1.05433, 1.03592, 1.01287, 1.00216, 0.96357]
     closest_zone = strong_zones[0]
@@ -153,7 +154,7 @@ def get_toZone_group(price: float):
         if distance < min_distance:
             min_distance = distance
             closest_zone = zone
-    bins = build_bin_toZone(5)
+    # bins = build_bin_toZone(5)
     for b in bins:
         if min_distance < b:
             return b  
@@ -166,8 +167,8 @@ def build_bin_kt_score(n_bins):
     return sorted(k_centers)
 
 
-def get_kt_score_group(kt_score: float):
-    bins = build_bin_kt_score(5)
+def get_kt_score_group(kt_score: float, bins):
+    # bins = build_bin_kt_score(5)
     for b in bins:
         if kt_score < b:
             return b 
@@ -180,11 +181,16 @@ def build_bin_bs_score(n_bins):
     return sorted(k_centers)
 
 
-def get_bs_score_group(bs_score: float):
-    bins = build_bin_bs_score(5)
+def get_bs_score_group(bs_score: float, bins):
+    # bins = build_bin_bs_score(5)
     for b in bins:
         if bs_score < b:
             return b 
+
+
+bins_to_zone = build_bin_toZone(5)
+bins_kt_score = build_bin_kt_score(5)
+bins_bs_score = build_bin_bs_score(5) 
 
 
 def day_to_state(data) -> tuple:
@@ -200,8 +206,8 @@ def day_to_state(data) -> tuple:
     bs_score = big_shadow(price1, open1, ema200, price2, open2, lastema200)
 
     price_gr = get_price_group(price)
-    to_zone_gr = get_toZone_group(price)
-    kt_score_gr = get_kt_score_group(kt_score)
-    bs_score_gr = get_bs_score_group(bs_score)
+    to_zone_gr = get_toZone_group(price, bins_to_zone)
+    kt_score_gr = get_kt_score_group(kt_score, bins_kt_score)
+    bs_score_gr = get_bs_score_group(bs_score, bins_bs_score)
 
     return (price_gr, to_zone_gr, kt_score_gr, bs_score_gr)
