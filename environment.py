@@ -105,7 +105,7 @@ class ForexEnv():
             self.day_open_rate = self.df.loc[self.day,:][2]        
             self.state =  (self.day_state, self.state[-1])
             
-            end_total_asset = self.state[1]*self.data[2] + self.balance
+            end_total_asset = self.state[1]*self.day_open_rate + self.balance
             self.asset_memory.append(end_total_asset) 
             self.reward = end_total_asset - begin_total_asset            
             self.rewards_memory.append(self.reward)
