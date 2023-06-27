@@ -14,17 +14,18 @@ class Model():
             print("Iteration ", _)
             current_state = environment.reset()
             while True:
-                action = self.choose_action(environment, exploration=exploration, debug = False)
+                action = self.choose_action(environment, exploration=exploration, debug=debug)
                 next_state, reward = environment.step(action)
                 if environment.terminate: #have to check right after the step
                     break
                 v_value = max([self.Q_values[(next_state, actionx)] for actionx in environment.action_space])
-                sample = reward + discount*v_value
+                sample = reward + discount * v_value
                 if (current_state, action) not in self.Q_values:
                     self.Q_values[(current_state, action)] = 0
                 self.Q_values[(current_state, action)] = self.Q_values[(current_state, action)]*(1-alpha) + sample*alpha
                 current_state = next_state
-            exploration /= 1.02 
+            exploration /= 1.02
+            # change from 1.02
             #decrease exploration
 
     
