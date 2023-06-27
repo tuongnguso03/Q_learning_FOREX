@@ -22,7 +22,7 @@ class Model():
                 sample = reward + discount * v_value
                 if (current_state, action) not in self.Q_values:
                     self.Q_values[(current_state, action)] = 0
-                self.Q_values[(current_state, action)] = self.Q_values[(current_state, action)]*(1-alpha) + sample*alpha
+                self.Q_values[(current_state, action)] = self.Q_values[(current_state, action)]*(1-alpha) + sample * alpha
                 current_state = next_state
             exploration /= 1.02
             # change from 1.02
@@ -45,12 +45,12 @@ class Model():
             if (environment.state, action) in self.Q_values: 
                 if self.Q_values[(environment.state, action)] == best_value:
                     best_actions.append(action)
-                else:
+                elif self.Q_values[(environment.state, action)] > best_value:
                     best_actions = [action]
-                    best_value = self.Q_values[(environment.state, action)]
+                    best_value = dict(self.Q_values)[(environment.state, action)]
         if best_actions:
             if debug:
-                print(best_actions)
+                print([(environment.state, i) for i in best_actions])
             return random.choice(best_actions)
         return self._random_move(environment)
     

@@ -1,6 +1,7 @@
 import pandas as pd
 from sklearn.cluster import KMeans
 
+
 df = pd.read_csv('forex_data.csv')
 #ema200s = df['200EMA']
 
@@ -8,7 +9,7 @@ df = pd.read_csv('forex_data.csv')
 def run_kmeans(data, num_clusters):
     kmeans = KMeans(n_clusters=num_clusters)
     kmeans.fit([[x] for x in data])
-    k_centers = [round(center[0],8) for center in kmeans.cluster_centers_]
+    k_centers = [round(center[0], 8) for center in kmeans.cluster_centers_]
     return k_centers
 
 
@@ -28,11 +29,12 @@ def build_bin_price(n_bins):
     bin_size = bin_price(df, n_bins)[0]
     for i in range(n_bins):
         bins.append(round((bins[-1] + bin_size), 4))
+    #print(bins) #newly added
     return bins
 
 
 def get_price_group(price: float):
-    bins = build_bin_price(10)
+    bins = build_bin_price(50)
     for b in bins:
         if price < b:
             return b # or bins.index(b)?
@@ -85,7 +87,7 @@ def calculate_kt_score(df):
             kt_score.extend([0,0])
             break
         score = kangaroo_tail(df.loc[i+1, 'Price'], df.loc[i+1, 'Open'], df.loc[i+1, 'High'],
-                              df.loc[i+1, 'Low'], df.loc[i+1, '200EMA'], df.loc[i+2, '200EMA'])
+                              df.loc[i+1, 'Low'], df.loc[i+1, '200EMA'], df.loc[i, '200EMA'])
         kt_score.append(score)
     
     return kt_score
@@ -127,7 +129,7 @@ def calculate_bs_score(df):
             bs_score.extend([0,0])
             break
         score = big_shadow(df.loc[i+1, 'Price'], df.loc[i+1, 'Open'], df.loc[i+1, '200EMA'],
-                            df.loc[i+2, 'Price'], df.loc[i+2, 'Open'], df.loc[i+2, '200EMA'])
+                            df.loc[i, 'Price'], df.loc[i, 'Open'], df.loc[i, '200EMA'])
         bs_score.append(score)
     return bs_score
 
@@ -196,9 +198,9 @@ def get_bs_score_group(bs_score: float, bins):
             return b 
 
 
-bins_to_zone = build_bin_toZone(5)
-bins_kt_score = build_bin_kt_score(5)
-bins_bs_score = build_bin_bs_score(5) 
+bins_to_zone = build_bin_toZone(10)
+bins_kt_score = build_bin_kt_score(10)
+bins_bs_score = build_bin_bs_score(10) 
 
 
 def day_to_state(data) -> tuple:
@@ -219,3 +221,5 @@ def day_to_state(data) -> tuple:
     bs_score_gr = get_bs_score_group(bs_score, bins_bs_score)
 
     return (price_gr, to_zone_gr, kt_score_gr, bs_score_gr)
+
+#for i in range(len(df)):
