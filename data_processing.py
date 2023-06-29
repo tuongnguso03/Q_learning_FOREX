@@ -124,7 +124,7 @@ def calculate_bs_score(df):
     return bs_score
 
 
-def dataset_with_indicators(df):
+def dataset_with_indicators():
     processed_df = df.copy()
     processed_df['toZone'] = calculate_toZone(df)
     processed_df['kt_score'] = calculate_kt_score(df)
@@ -169,9 +169,8 @@ def build_bin_kt_score(n_bins):
 
 def get_kt_score_group(kt_score: float, bins):
     # bins = build_bin_kt_score(5)
-    for b in bins:
-        if kt_score < b:
-            return b 
+    closest_center = min(bins, key=lambda c: abs(kt_score - c))
+    return closest_center
 
 
 def build_bin_bs_score(n_bins):
@@ -183,14 +182,26 @@ def build_bin_bs_score(n_bins):
 
 def get_bs_score_group(bs_score: float, bins):
     # bins = build_bin_bs_score(5)
-    for b in bins:
-        if bs_score < b:
-            return b 
+    closest_center = min(bins, key=lambda c: abs(bs_score - c))
+    return closest_center
 
 
+bins_price = build_bin_price(30)
 bins_to_zone = build_bin_toZone(5)
-bins_kt_score = build_bin_kt_score(5)
+bins_kt_score = build_bin_kt_score(10)
 bins_bs_score = build_bin_bs_score(5) 
+
+# chay lan 1 xong thi comment out doan tren va thay bang doan nay
+# bins_price = []
+# bins_to_zone = []
+# bins_kt_score = []
+# bins_bs_score = [] 
+
+def print_bins():
+    print('price:', bins_price)
+    print('toZone:', bins_to_zone)
+    print('kt_score:', bins_kt_score)
+    print('bs_score:', bins_bs_score)
 
 
 def day_to_state(data) -> tuple:
