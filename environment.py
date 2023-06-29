@@ -20,7 +20,7 @@ print('Enter Forex Environment')
 print('Enter Forex Environment')
 class ForexEnv():
     """Trading environment"""
-    def __init__(self, df=pd.read_csv('forex_data.csv'),day = 2):
+    def __init__(self, df=pd.read_csv('forex_data_2000.csv'),day = 2):
         self.day = day
         self.df = df
         self.action_space = [-20, 20]
