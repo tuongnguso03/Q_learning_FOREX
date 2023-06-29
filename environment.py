@@ -1,3 +1,4 @@
+from cmath import pi
 from data_processing import day_to_state
 import matplotlib
 matplotlib.use('Agg')
@@ -19,14 +20,15 @@ print('Enter Forex Environment')
 print('Enter Forex Environment')
 class ForexEnv():
     """Trading environment"""
-    def __init__(self, df,day = 2):
+    def __init__(self, df=pd.read_csv('forex_data_2000.csv'),day = 2):
         self.day = day
         self.df = df
-        self.action_space = [-5, -2, -1, 0 , 1, 2, 5]
+        self.action_space = [-20, 20]
         # load data from a pandas dataframe
         self.data = self.df.loc[self.day-2: self.day,:] #Passing the data of 3 days for feature extraction and that sort
         self.day_state = day_to_state(self.data)
-        self.terminate = False             
+        self.terminate = False
+        self.day_open_rate = self.df.loc[self.day,:][2]            
         # initalize state
         self.state = (self.day_state, 0) #[price_group, holdings]
         # initialize reward
@@ -38,20 +40,34 @@ class ForexEnv():
         self.rewards_memory = []
         self.trades = 0
         #self.reset()
+    def close_sells(self): #aka buy all sold units
+        if 0 <= HOLD_LIMIT and self.balance//self.day_open_rate >= self.state[1]:
+            self.balance += self.day_open_rate * self.state[1] * (1 - TRANSACTION_FEE_PERCENT)
+            self.cost += self.day_open_rate * self.state[1] * TRANSACTION_FEE_PERCENT
+            self.state = (self.state[0], 0)
+            self.trades += 1
+        return
+
+    def close_buys(self): #aka sell all bought units
+        if self.state[1] > DEBT_LIMIT:
+            self.balance += self.day_open_rate * self.state[1]
+            self.state = (self.state[0], 0)
+            self.trades += 1
+        return
+
 
     def _buy(self, action):
-        if self.state[1] + HMAX_NORMALIZE*action <= HOLD_LIMIT and self.balance//self.data[2] >= HMAX_NORMALIZE*action:
+        if self.state[1] + HMAX_NORMALIZE*action <= HOLD_LIMIT and self.balance//self.day_open_rate >= HMAX_NORMALIZE*action:
             self.state = (self.state[0], self.state[1] + HMAX_NORMALIZE*action)
-            self.balance -= self.data[2]*HMAX_NORMALIZE*action*(1+TRANSACTION_FEE_PERCENT)
-            self.cost += self.data[2]*HMAX_NORMALIZE*action*TRANSACTION_FEE_PERCENT
+            self.balance -= self.day_open_rate * HMAX_NORMALIZE * action * (1 + TRANSACTION_FEE_PERCENT)
+            self.cost += self.day_open_rate * HMAX_NORMALIZE * action * TRANSACTION_FEE_PERCENT
             self.trades+=1
         return
     
     def _sell(self, action):
         if self.state[1] > DEBT_LIMIT:
-            self.state = (self.state[0], self.state[1] + HMAX_NORMALIZE*action)
-            self.balance -= self.data[2]*HMAX_NORMALIZE*action*(1-TRANSACTION_FEE_PERCENT)
-            self.cost -= self.data[2]*HMAX_NORMALIZE*action*TRANSACTION_FEE_PERCENT
+            self.state = (self.state[0], self.state[1] + HMAX_NORMALIZE * action)
+            self.balance -= self.day_open_rate * HMAX_NORMALIZE * action
             self.trades+=1
         return
     
@@ -93,26 +109,31 @@ class ForexEnv():
             #print("begin_total_asset:{}".format(begin_total_asset))
 
             #taking the action
-            if action > 0 :
+            if action == pi and self.state[1] < 0:
+                self.close_sells()
+            elif action == -pi and self.state[1] > 0 :
+                self.close_buys()
+            elif action > pi:
                 self._buy(action)
-            elif action < 0:
+            elif action < -pi:
                 self._sell(action)
 
             self.day += 1
             self.data = self.df.loc[self.day-2: self.day,:] #Passing the data of 3 days for feature extraction and that sort
-            self.day_state = day_to_state(self.data)       
-            #load next state
-            # print("stock_shares:{}".format(self.state[29:]))
+            self.day_state = day_to_state(self.data)
+            self.day_open_rate = self.df.loc[self.day,:][2]        
             self.state =  (self.day_state, self.state[-1])
             
-            end_total_asset = self.state[1]*self.data[2] + self.balance
-            self.asset_memory.append(end_total_asset)
-            #print("end_total_asset:{}".format(end_total_asset))
-            
+            end_total_asset = self.state[1] * self.day_open_rate + self.balance
+            self.asset_memory.append(end_total_asset) 
             self.reward = end_total_asset - begin_total_asset            
-            # print("step_reward:{}".format(self.reward))
             self.rewards_memory.append(self.reward)
-            self.reward = self.reward*REWARD_SCALING
+            self.reward = self.reward * REWARD_SCALING
+            self.action_space = [-20, 20]
+            if self.state[1] < 0:
+                self.action_space = [-20, pi]
+            if self.state[1] > 0:
+                self.action_space = [20, -pi]
         return self.state, self.reward
 
     def reset(self):
@@ -120,6 +141,7 @@ class ForexEnv():
         # load data from a pandas dataframe
         self.data = self.df.loc[self.day-2: self.day,:] #Passing the data of 3 days for feature extraction and that sort
         self.day_state = day_to_state(self.data)
+        self.day_open_rate = self.df.loc[self.day,:][2] 
         self.terminate = False             
         # initalize state
         self.state = (self.day_state, 0)

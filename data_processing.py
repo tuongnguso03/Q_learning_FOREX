@@ -1,17 +1,20 @@
 import pandas as pd
 from sklearn.cluster import KMeans
 
-df = pd.read_csv('forex_data.csv')
+
+df = pd.read_csv('forex_data_2000.csv')
 #ema200s = df['200EMA']
+
 
 def run_kmeans(data, num_clusters):
     kmeans = KMeans(n_clusters=num_clusters)
     kmeans.fit([[x] for x in data])
-    k_centers = [round(center[0],8) for center in kmeans.cluster_centers_]
+    k_centers = [round(center[0], 4) for center in kmeans.cluster_centers_]
     return k_centers
 
 
 # 1st feature: price
+
 def bin_price(df, n_bins):
     highest = df.loc[df['High'].idxmax()]['High']
     lowest = df.loc[df['Low'].idxmin()]['Low']
@@ -20,16 +23,18 @@ def bin_price(df, n_bins):
     return bin_size, highest, lowest
 
 
+
 def build_bin_price(n_bins):
     bins = [df.loc[df['Low'].idxmin()]['Low']]
     bin_size = bin_price(df, n_bins)[0]
     for i in range(n_bins):
         bins.append(round((bins[-1] + bin_size), 4))
+    #print(bins) #newly added
     return bins
 
 
 def get_price_group(price: float):
-    bins = build_bin_price(10)
+    bins = build_bin_price(50)
     for b in bins:
         if price < b:
             return b # or bins.index(b)?
@@ -56,22 +61,36 @@ def calculate_toZone(df):
         
 
 # 3rd feature: kangaroo tail score
-def trend(lastema200, ema200):
-    trend = (ema200 - lastema200) / lastema200
-    return trend + 1 #values range from 0 to 2
+def trend200(lastema200, ema200):
+    trend200 = (ema200 - lastema200) / lastema200
+    return trend200
+
+def trend20(lastema20, ema20):
+    trend20 = (ema20 - lastema20) / lastema20
+    return trend20    
 
 
-def kangaroo_tail(price, open, high, low, ema200: float, lastema200: float):
+def kangaroo_tail(price, open, high, low, ema200: float, lastema200: float, ema20: float, lastema20: float):
     if price >= open:
         up, down = price, open
     else:
         up, down = open, price
+    microtrend = trend20(lastema20, ema20)
     if high - up >= down - low:
-        score = (high - low) / (up - low)
+        score = - (high - low) / (up - low) * (1 + trend200(lastema200, ema200))
+        if microtrend < 0:
+            score *= abs(microtrend)
+        elif microtrend > 0:
+            score *= (1 + microtrend)
     else:
-        score = (high - low) / (high - down)
+        score = (high - low) / (high - down) * (1 - trend200(lastema200, ema200))
+        if microtrend > 0:
+            score *= abs(microtrend)
+        elif microtrend < 0:
+            score *= (1 - microtrend)
     
-    return 1000 * (high - low) * score * trend(lastema200, ema200) 
+    return 1000 * (high - low) * score
+
     # 1000 multiplier is to convert to pips.
 
 def calculate_kt_score(df):
@@ -80,23 +99,28 @@ def calculate_kt_score(df):
         if i == len(df) - 2:
             kt_score.extend([0,0])
             break
-        score = kangaroo_tail(df.loc[i+1, 'Price'], df.loc[i+1, 'Open'], df.loc[i+1, 'High'],
-                              df.loc[i+1, 'Low'], df.loc[i+1, '200EMA'], df.loc[i+2, '200EMA'])
+        score = kangaroo_tail(df.loc[i + 1, 'Price'], df.loc[i + 1, 'Open'], df.loc[i + 1, 'High'],
+                              df.loc[i + 1, 'Low'], df.loc[i + 1, '200EMA'], df.loc[i, '200EMA'], 
+                              df.loc[i + 1, '20EMA'], df.loc[i, '20EMA'])
         kt_score.append(score)
     
     return kt_score
 
 
 # 4th feature: big shadow score
-def big_shadow(price1, open1, ema200, price2, open2, lastema200) -> float:
+def big_shadow(price1, open1, ema200, ema20, price2, open2, lastema200, lastema20) -> float:
     # Need input of previous day's data:
     direction = None
     score = 0
+    microtrend = trend20(lastema20, ema20)
+    
     def direction(price, open) -> str:
         if price >= open:
             return "up"
         else:
             return "down"
+
+    
     mainDirection = direction(price1, open1)
     infDirection = direction(price2, open2)
     if mainDirection == infDirection:
@@ -105,11 +129,19 @@ def big_shadow(price1, open1, ema200, price2, open2, lastema200) -> float:
         if open2 - price2 == 0:
             return 0
         if mainDirection == "up":
-            score = (price1 - open1) / (open2 - price2)
+            score = (price1 - open1) / (open2 - price2) * (1 - trend200(lastema200, ema200))
+            if microtrend > 0:
+                score *= abs(microtrend)
+            elif microtrend < 0:
+                score *= (1 - microtrend)
         else:
-            score = (open1 - price1) / (price2 - open2)
+            score = - (open1 - price1) / (price2 - open2) * (1 + trend200(lastema200, ema200))
+            if microtrend < 0:
+                score *= abs(microtrend)
+            elif microtrend > 0:
+                score *= (1 + microtrend)
 
-        return 1000 * abs(price1 - open1) * score * trend(lastema200, ema200)
+        return 1000 * abs(price1 - open1) * score
 
 
 def calculate_bs_score(df):
@@ -118,8 +150,8 @@ def calculate_bs_score(df):
         if i == len(df) - 2:
             bs_score.extend([0,0])
             break
-        score = big_shadow(df.loc[i+1, 'Price'], df.loc[i+1, 'Open'], df.loc[i+1, '200EMA'],
-                            df.loc[i+2, 'Price'], df.loc[i+2, 'Open'], df.loc[i+2, '200EMA'])
+        score = big_shadow(df.loc[i+1, 'Price'], df.loc[i+1, 'Open'], df.loc[i+1, '200EMA'], df.loc[i + 1, '20EMA'],
+                            df.loc[i, 'Price'], df.loc[i, 'Open'], df.loc[i, '200EMA'], df.loc[i, '20EMA'])
         bs_score.append(score)
     return bs_score
 
@@ -211,10 +243,10 @@ def day_to_state(data) -> tuple:
         days.append(row)
     
     price = days[2]['Open']
-    price1, open1, high1, low1, ema200 = days[1]['Price'], days[1]['Open'], days[1]['High'], days[1]['Low'], days[1]['200EMA']
-    price2, open2, high2, low2, lastema200 = days[0]['Price'], days[0]['Open'], days[0]['High'], days[0]['Low'], days[0]['200EMA']
-    kt_score = kangaroo_tail(price1, open1, high1, low1, ema200, lastema200)
-    bs_score = big_shadow(price1, open1, ema200, price2, open2, lastema200)
+    price1, open1, high1, low1, ema200, ema20 = days[1]['Price'], days[1]['Open'], days[1]['High'], days[1]['Low'], days[1]['200EMA'], days[1]['20EMA']
+    price2, open2, high2, low2, lastema200, lastema20 = days[0]['Price'], days[0]['Open'], days[0]['High'], days[0]['Low'], days[0]['200EMA'], days[0]['20EMA']
+    kt_score = kangaroo_tail(price1, open1, high1, low1, ema200, lastema200, ema20, lastema20)
+    bs_score = big_shadow(price1, open1, ema200, ema20, price2, open2, lastema200, lastema20)
 
     price_gr = get_price_group(price)
     to_zone_gr = get_toZone_group(price, bins_to_zone)
@@ -222,3 +254,5 @@ def day_to_state(data) -> tuple:
     bs_score_gr = get_bs_score_group(bs_score, bins_bs_score)
 
     return (price_gr, to_zone_gr, kt_score_gr, bs_score_gr)
+
+#for i in range(len(df)):
