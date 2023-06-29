@@ -2,8 +2,11 @@ from environment import ForexEnv
 from collections import defaultdict
 import pickle
 import random
+import pandas as pd
 class Model():
     def __init__(self, load = None) -> None:
+        self.Q = []
+        self.i = 0
         if load != None:
             with open(load, 'rb') as handle:
                 self.Q_values = defaultdict(lambda: 0, pickle.load(handle))
@@ -22,8 +25,10 @@ class Model():
                 sample = reward + discount * v_value
                 if (current_state, action) not in self.Q_values:
                     self.Q_values[(current_state, action)] = 0
-                self.Q_values[(current_state, action)] = self.Q_values[(current_state, action)]*(1-alpha) + sample*alpha
+                self.Q_values[(current_state, action)] = self.Q_values[(current_state, action)]*(1-alpha) + sample * alpha
                 current_state = next_state
+                q_data = pd.DataFrame(self.Q)
+                q_data.to_csv('a.csv', mode='a', index=False, header=False)
             exploration /= 1.02
             # change from 1.02
             #decrease exploration
@@ -45,12 +50,13 @@ class Model():
             if (environment.state, action) in self.Q_values: 
                 if self.Q_values[(environment.state, action)] == best_value:
                     best_actions.append(action)
-                else:
+                elif self.Q_values[(environment.state, action)] > best_value:
                     best_actions = [action]
                     best_value = self.Q_values[(environment.state, action)]
         if best_actions:
             if debug:
-                print(best_actions)
+                self.Q.append((self.i ,[((environment.state, i), self.Q_values[(environment.state, i)]) for i in best_actions]))
+                self.i += 1
             return random.choice(best_actions)
         return self._random_move(environment)
     
