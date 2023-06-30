@@ -15,6 +15,7 @@ class Model():
         for _ in range(iterations):
             print("Iteration ", _)
             current_state = environment.reset()
+            self.Q = []
             while True:
                 action = self.choose_action(environment, exploration=exploration, debug=debug)
                 next_state, reward = environment.step(action)
@@ -26,7 +27,10 @@ class Model():
                     self.Q_values[(current_state, action)] = 0
                 self.Q_values[(current_state, action)] = self.Q_values[(current_state, action)]*(1-alpha) + sample * alpha
                 current_state = next_state
-            if debug == False:
+            if debug == True:
+                f = open("a.csv", 'w')
+                f.truncate()
+                f.close()
                 q_data = pd.DataFrame(self.Q)
                 q_data.to_csv('a.csv', mode='a', index=False, header=False)
             exploration /= 1.02
