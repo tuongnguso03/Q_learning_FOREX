@@ -19,7 +19,7 @@ def bin_price(df, n_bins):
     highest = df.loc[df['High'].idxmax()]['High']
     lowest = df.loc[df['Low'].idxmin()]['Low']
     diff = highest - lowest
-    bin_size = round(diff / n_bins, 2)
+    bin_size = round(diff / n_bins, 4)
     return bin_size, highest, lowest
 
 
@@ -34,7 +34,7 @@ def build_bin_price(n_bins):
 
 
 def get_price_group(price: float):
-    bins = build_bin_price(50)
+    bins = build_bin_price(100)
     for b in bins:
         if price < b:
             return b # or bins.index(b)?
@@ -77,17 +77,17 @@ def kangaroo_tail(price, open, high, low, ema200: float, lastema200: float, ema2
         up, down = open, price
     microtrend = trend20(lastema20, ema20)
     if high - up >= down - low:
-        score = - (high - low) / (up - low) * (1 + trend200(lastema200, ema200))
+        score = (high - low) / (up - low) * (1 + trend200(lastema200, ema200))
         if microtrend < 0:
-            score *= abs(microtrend)
+            score# *= 0.3
         elif microtrend > 0:
-            score *= (1 + microtrend)
+            score# *= 1.5
     else:
         score = (high - low) / (high - down) * (1 - trend200(lastema200, ema200))
         if microtrend > 0:
-            score *= abs(microtrend)
+            score# *= 0.3
         elif microtrend < 0:
-            score *= (1 - microtrend)
+            score# *= 1.5
     
     return 1000 * (high - low) * score
 
@@ -131,15 +131,15 @@ def big_shadow(price1, open1, ema200, ema20, price2, open2, lastema200, lastema2
         if mainDirection == "up":
             score = (price1 - open1) / (open2 - price2) * (1 - trend200(lastema200, ema200))
             if microtrend > 0:
-                score *= abs(microtrend)
+                score# *= abs(microtrend)
             elif microtrend < 0:
-                score *= (1 - microtrend)
+                score# *= (1 - microtrend)
         else:
-            score = - (open1 - price1) / (price2 - open2) * (1 + trend200(lastema200, ema200))
+            score = (open1 - price1) / (price2 - open2) * (1 + trend200(lastema200, ema200))
             if microtrend < 0:
-                score *= abs(microtrend)
+                score# *= abs(microtrend)
             elif microtrend > 0:
-                score *= (1 + microtrend)
+                score# *= (1 + microtrend)
 
         return 1000 * abs(price1 - open1) * score
 
