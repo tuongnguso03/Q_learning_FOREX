@@ -9,7 +9,7 @@ df = pd.read_csv('forex_data_2000.csv')
 def run_kmeans(data, num_clusters):
     kmeans = KMeans(n_clusters=num_clusters)
     kmeans.fit([[x] for x in data])
-    k_centers = [round(center[0], 4) for center in kmeans.cluster_centers_]
+    k_centers = [round(center[0], 5) for center in kmeans.cluster_centers_]
     return k_centers
 
 
@@ -29,15 +29,13 @@ def build_bin_price(n_bins):
     bin_size = bin_price(df, n_bins)[0]
     for i in range(n_bins):
         bins.append(round((bins[-1] + bin_size), 4))
-    #print(bins) #newly added
     return bins
 
 
-def get_price_group(price: float):
-    bins = build_bin_price(100)
+def get_price_group(price: float, bins):
     for b in bins:
         if price < b:
-            return b # or bins.index(b)?
+            return b 
 
 
 # 2nd feature: distance to zone
@@ -186,7 +184,6 @@ def get_toZone_group(price: float, bins):
         if distance < min_distance:
             min_distance = distance
             closest_zone = zone
-    # bins = build_bin_toZone(5)
     for b in bins:
         if min_distance < b:
             return b  
@@ -200,7 +197,6 @@ def build_bin_kt_score(n_bins):
 
 
 def get_kt_score_group(kt_score: float, bins):
-    # bins = build_bin_kt_score(5)
     closest_center = min(bins, key=lambda c: abs(kt_score - c))
     return closest_center
 
@@ -213,23 +209,25 @@ def build_bin_bs_score(n_bins):
 
 
 def get_bs_score_group(bs_score: float, bins):
-    # bins = build_bin_bs_score(5)
     closest_center = min(bins, key=lambda c: abs(bs_score - c))
     return closest_center
 
 
-bins_price = build_bin_price(30)
-bins_to_zone = build_bin_toZone(5)
-bins_kt_score = build_bin_kt_score(10)
-bins_bs_score = build_bin_bs_score(5) 
-
+# bins_price = build_bin_price(30)
+# bins_to_zone = build_bin_toZone(10)
+# bins_kt_score = build_bin_kt_score(10)
+# bins_bs_score = build_bin_bs_score(5) 
 # chay lan 1 xong thi comment out doan tren va thay bang doan nay
-# bins_price = []
-# bins_to_zone = []
-# bins_kt_score = []
-# bins_bs_score = [] 
+
+bins_price = [0.8227, 0.8487, 0.8747, 0.9007, 0.9267, 0.9527, 0.9787, 1.0047, 1.0307, 1.0567, 
+              1.0827, 1.1087, 1.1347, 1.1607, 1.1867, 1.2127, 1.2387, 1.2647, 1.2907, 1.3167, 
+              1.3427, 1.3687, 1.3947, 1.4207, 1.4467, 1.4727, 1.4987, 1.5247, 1.5507, 1.5767, 1.6027]
+bins_to_zone = [0.00081, 0.00246, 0.00391, 0.0053, 0.00688, 0.00875, 0.01051, 0.01339, 0.01809, 0.02566]
+bins_kt_score = [5.68386, 8.68725, 11.56433, 14.82805, 19.43959, 24.99437, 33.26295, 44.68489, 66.90626, 112.24473]
+bins_bs_score = [2.96503, 86.86616, 356.51993, 684.51489, 2496.47856]
 
 def print_bins():
+    dataset_with_indicators()
     print('price:', bins_price)
     print('toZone:', bins_to_zone)
     print('kt_score:', bins_kt_score)
@@ -248,11 +246,10 @@ def day_to_state(data) -> tuple:
     kt_score = kangaroo_tail(price1, open1, high1, low1, ema200, lastema200, ema20, lastema20)
     bs_score = big_shadow(price1, open1, ema200, ema20, price2, open2, lastema200, lastema20)
 
-    price_gr = get_price_group(price)
+    price_gr = get_price_group(price, bins_price)
     to_zone_gr = get_toZone_group(price, bins_to_zone)
     kt_score_gr = get_kt_score_group(kt_score, bins_kt_score)
     bs_score_gr = get_bs_score_group(bs_score, bins_bs_score)
 
     return (price_gr, to_zone_gr, kt_score_gr, bs_score_gr)
 
-#for i in range(len(df)):

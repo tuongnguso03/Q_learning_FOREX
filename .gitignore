@@ -6,3 +6,4 @@ account_value_train.csv
 account_value_train.csv
 account_value_train.png
 account_value_train.png
+*.pyc
