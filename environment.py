@@ -9,9 +9,9 @@ import pandas as pd
 # 1000 EUR per lot since that is what it is
 HMAX_NORMALIZE = 1000
 HOLD_LIMIT = 100000
-DEBT_LIMIT = -100000
+DEBT_LIMIT = 100000
 # initial amount of money we have in our account
-INITIAL_ACCOUNT_BALANCE=1000000
+INITIAL_ACCOUNT_BALANCE = 1000000
 # transaction fee: 1/1000 reasonable percentage
 TRANSACTION_FEE_PERCENT = 0.001
 REWARD_SCALING = 1e-4
@@ -65,7 +65,7 @@ class ForexEnv():
         return
     
     def _sell(self, action):
-        if self.state[1] > DEBT_LIMIT:
+        if self.state[1] >= DEBT_LIMIT:
             self.state = (self.state[0], self.state[1] + HMAX_NORMALIZE * action)
             self.balance -= self.day_open_rate * HMAX_NORMALIZE * action
             self.trades+=1
