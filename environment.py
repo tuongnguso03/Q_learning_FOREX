@@ -11,7 +11,7 @@ HMAX_NORMALIZE = 1000
 HOLD_LIMIT = 100000
 DEBT_LIMIT = -100000
 # initial amount of money we have in our account
-INITIAL_ACCOUNT_BALANCE=1000000
+INITIAL_ACCOUNT_BALANCE = 1000000
 # transaction fee: 1/1000 reasonable percentage
 TRANSACTION_FEE_PERCENT = 0.001
 REWARD_SCALING = 1e-4
@@ -20,10 +20,10 @@ print('Enter Forex Environment')
 print('Enter Forex Environment')
 class ForexEnv():
     """Trading environment"""
-    def __init__(self, df=pd.read_csv('forex_data_2000.csv'),day = 2):
+    def __init__(self, df=pd.read_csv('forex_data_train_1987-2017.csv'),day = 2):
         self.day = day
         self.df = df
-        self.action_space = [-20, 20]
+        self.action_space = [-20, 0, 20]
         # load data from a pandas dataframe
         self.data = self.df.loc[self.day-2: self.day,:] #Passing the data of 3 days for feature extraction and that sort
         self.day_state = day_to_state(self.data)
@@ -41,7 +41,7 @@ class ForexEnv():
         self.trades = 0
         #self.reset()
     def close_sells(self): #aka buy all sold units
-        if 0 <= HOLD_LIMIT and self.balance//self.day_open_rate >= self.state[1]:
+        if self.balance//self.day_open_rate >= self.state[1]:
             self.balance += self.day_open_rate * self.state[1] * (1 - TRANSACTION_FEE_PERCENT)
             self.cost += self.day_open_rate * self.state[1] * TRANSACTION_FEE_PERCENT
             self.state = (self.state[0], 0)
@@ -129,11 +129,15 @@ class ForexEnv():
             self.reward = end_total_asset - begin_total_asset            
             self.rewards_memory.append(self.reward)
             self.reward = self.reward * REWARD_SCALING
-            self.action_space = [-20, 20]
+            self.action_space = [-20, 0, 20]
             if self.state[1] < 0:
-                self.action_space = [-20, pi]
+                self.action_space = [0, pi] #-20, pi
+                if self.state[1] > DEBT_LIMIT:
+                    self.action_space.append(-20)
             if self.state[1] > 0:
-                self.action_space = [20, -pi]
+                self.action_space = [0, -pi] #20, pi
+                if self.state[1] < HOLD_LIMIT:
+                    self.action_space.append(20)
         return self.state, self.reward
 
     def reset(self):

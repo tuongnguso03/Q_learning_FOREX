@@ -13,21 +13,33 @@ class Model():
             self.Q_values = defaultdict(lambda: 0, {})
     def Q_learning(self, environment: ForexEnv, iterations = 1000, alpha = 0.5, exploration = 0.5, discount = 0.5, debug = False):
         for _ in range(iterations):
+            self.noState = []
             print("Iteration ", _)
             current_state = environment.reset()
             self.Q = []
             while True:
                 action = self.choose_action(environment, exploration=exploration, debug=debug)
+                test_state = environment.day_state#
                 next_state, reward = environment.step(action)
+                if debug == True:#
+                    Q_dict = dict(self.Q_values)#
+                    keys = list(Q_dict.keys())#
+                    reduce = [a[0] for a in keys]#
+                    state = [a[0] for a in reduce]#
+                    price = [a[0] for a in state]#
+                    if next_state not in reduce:#
+                        self.noState.append(next_state)#
                 if environment.terminate: #have to check right after the step
                     break
                 v_value = max([self.Q_values[(next_state, actionx)] for actionx in environment.action_space])
                 sample = reward + discount * v_value
                 if (current_state, action) not in self.Q_values:
+                    print(1)#
                     self.Q_values[(current_state, action)] = 0
                 self.Q_values[(current_state, action)] = self.Q_values[(current_state, action)]*(1-alpha) + sample * alpha
                 current_state = next_state
             if debug == True:
+                #print(self.noState)#
                 f = open("a.csv", 'w')
                 f.truncate()
                 f.close()
